@@ -44,14 +44,19 @@ class DocRedisCache(RedisObject):
     async def get(self, item: DocItem) -> Optional[str]:
         """Return the Markdown content of the symbol `item` if it exists."""
         with await self._get_pool_connection() as connection:
-            return await connection.hget(f"{self.namespace}:{item_key(item)}", item.symbol_id, encoding="utf8")
+            return await connection.hget(
+                f"{self.namespace}:{item_key(item)}", item.symbol_id, encoding="utf8"
+            )
 
     @namespace_lock
     async def delete(self, package: str) -> bool:
         """Remove all values for `package`; return True if at least one key was deleted, False otherwise."""
         with await self._get_pool_connection() as connection:
             package_keys = [
-                package_key async for package_key in connection.iscan(match=f"{self.namespace}:{package}:*")
+                package_key
+                async for package_key in connection.iscan(
+                    match=f"{self.namespace}:{package}:*"
+                )
             ]
             if package_keys:
                 await connection.delete(*package_keys)
@@ -79,7 +84,10 @@ class StaleItemCounter(RedisObject):
         """Remove all values for `package`; return True if at least one key was deleted, False otherwise."""
         with await self._get_pool_connection() as connection:
             package_keys = [
-                package_key async for package_key in connection.iscan(match=f"{self.namespace}:{package}:*")
+                package_key
+                async for package_key in connection.iscan(
+                    match=f"{self.namespace}:{package}:*"
+                )
             ]
             if package_keys:
                 await connection.delete(*package_keys)

@@ -29,7 +29,7 @@ log = get_logger(__name__)
 CODE_BLOCK_RE = re.compile(
     r"(?P<delim>``?)[^`]+?(?P=delim)(?!`+)"  # Inline codeblock
     r"|```(.+?)```",  # Multiline codeblock
-    re.DOTALL | re.MULTILINE
+    re.DOTALL | re.MULTILINE,
 )
 EVERYONE_PING_RE = re.compile(rf"@everyone|<@&{Guild.id}>|@here")
 SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
@@ -37,8 +37,12 @@ URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 
 # Exclude variation selectors from zalgo because they're actually invisible.
 VARIATION_SELECTORS = r"\uFE00-\uFE0F\U000E0100-\U000E01EF"
-INVISIBLE_RE = regex.compile(rf"[{VARIATION_SELECTORS}\p{{UNASSIGNED}}\p{{FORMAT}}\p{{CONTROL}}--\s]", regex.V1)
-ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIATION_SELECTORS}]]", regex.V1)
+INVISIBLE_RE = regex.compile(
+    rf"[{VARIATION_SELECTORS}\p{{UNASSIGNED}}\p{{FORMAT}}\p{{CONTROL}}--\s]", regex.V1
+)
+ZALGO_RE = regex.compile(
+    rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIATION_SELECTORS}]]", regex.V1
+)
 
 # Other constants.
 DAYS_BETWEEN_ALERTS = 3
@@ -77,7 +81,7 @@ class Filtering(Cog):
                     "Your post has been removed for abusing Unicode character rendering (aka Zalgo text). "
                     f"{staff_mistake_str}"
                 ),
-                "schedule_deletion": False
+                "schedule_deletion": False,
             },
             "filter_invites": {
                 "enabled": Filter.filter_invites,
@@ -89,7 +93,7 @@ class Filtering(Cog):
                     f"Per Rule 6, your invite link has been removed. {staff_mistake_str}\n\n"
                     r"Our server rules can be found here: <https://pythondiscord.com/pages/rules>"
                 ),
-                "schedule_deletion": False
+                "schedule_deletion": False,
             },
             "filter_domains": {
                 "enabled": Filter.filter_domains,
@@ -100,21 +104,21 @@ class Filtering(Cog):
                 "notification_msg": (
                     f"Your URL has been removed because it matched a blacklisted domain. {staff_mistake_str}"
                 ),
-                "schedule_deletion": False
+                "schedule_deletion": False,
             },
             "watch_regex": {
                 "enabled": Filter.watch_regex,
                 "function": self._has_watch_regex_match,
                 "type": "watchlist",
                 "content_only": True,
-                "schedule_deletion": True
+                "schedule_deletion": True,
             },
             "watch_rich_embeds": {
                 "enabled": Filter.watch_rich_embeds,
                 "function": self._has_rich_embed,
                 "type": "watchlist",
                 "content_only": False,
-                "schedule_deletion": False
+                "schedule_deletion": False,
             },
             "filter_everyone_ping": {
                 "enabled": Filter.filter_everyone_ping,
@@ -127,11 +131,13 @@ class Filtering(Cog):
                     f"Your message has been removed. {staff_mistake_str}"
                 ),
                 "schedule_deletion": False,
-                "ping_everyone": False
+                "ping_everyone": False,
             },
         }
 
-        scheduling.create_task(self.reschedule_offensive_msg_deletion(), event_loop=self.bot.loop)
+        scheduling.create_task(
+            self.reschedule_offensive_msg_deletion(), event_loop=self.bot.loop
+        )
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
@@ -141,7 +147,9 @@ class Filtering(Cog):
         """Fetch items from the filter_list_cache."""
         return self.bot.filter_list_cache[f"{list_type.upper()}.{allowed}"].keys()
 
-    def _get_filterlist_value(self, list_type: str, value: Any, *, allowed: bool) -> dict:
+    def _get_filterlist_value(
+        self, list_type: str, value: Any, *, allowed: bool
+    ) -> dict:
         """Fetch one specific value from filter_list_cache."""
         return self.bot.filter_list_cache[f"{list_type.upper()}.{allowed}"][value]
 
@@ -149,9 +157,7 @@ class Filtering(Cog):
     def _expand_spoilers(text: str) -> str:
         """Return a string containing all interpretations of a spoilered message."""
         split_text = SPOILER_RE.split(text)
-        return ''.join(
-            split_text[0::2] + split_text[1::2] + split_text
-        )
+        return "".join(split_text[0::2] + split_text[1::2] + split_text)
 
     @property
     def mod_log(self) -> ModLog:
@@ -184,7 +190,7 @@ class Filtering(Cog):
         """Check bad words from passed string (name). Return list of matches."""
         name = self.clean_input(name)
         matches = []
-        watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
+        watchlist_patterns = self._get_filterlist_items("filter_token", allowed=False)
         for pattern in watchlist_patterns:
             if match := re.search(pattern, name, flags=re.IGNORECASE):
                 matches.append(match)
@@ -210,7 +216,9 @@ class Filtering(Cog):
             if not matches or not await self.check_send_alert(member):
                 return
 
-            log.info(f"Sending bad nickname alert for '{member.display_name}' ({member.id}).")
+            log.info(
+                f"Sending bad nickname alert for '{member.display_name}' ({member.id})."
+            )
 
             log_string = (
                 f"**User:** {format_user(member)}\n"
@@ -224,7 +232,7 @@ class Filtering(Cog):
                 title="Username filtering alert",
                 text=log_string,
                 channel_id=Channels.mod_alerts,
-                thumbnail=member.display_avatar.url
+                thumbnail=member.display_avatar.url,
             )
 
             # Update time when alert sent
@@ -260,7 +268,9 @@ class Filtering(Cog):
                             filter_triggered = True
 
                         stats = self._add_stats(filter_name, match, result)
-                        await self._send_log(filter_name, _filter, msg, stats, reason, is_eval=True)
+                        await self._send_log(
+                            filter_name, _filter, msg, stats, reason, is_eval=True
+                        )
 
                         break  # We don't want multiple filters to trigger
 
@@ -321,28 +331,44 @@ class Filtering(Cog):
 
                             # Notify the user if the filter specifies
                             if _filter["user_notification"]:
-                                await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
+                                await self.notify_member(
+                                    msg.author, _filter["notification_msg"], msg.channel
+                                )
 
                         # If the message is classed as offensive, we store it in the site db and
                         # it will be deleted it after one week.
                         if _filter["schedule_deletion"] and not is_private:
-                            delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME).isoformat()
+                            delete_date = (
+                                msg.created_at + OFFENSIVE_MSG_DELETE_TIME
+                            ).isoformat()
                             data = {
-                                'id': msg.id,
-                                'channel_id': msg.channel.id,
-                                'delete_date': delete_date
+                                "id": msg.id,
+                                "channel_id": msg.channel.id,
+                                "delete_date": delete_date,
                             }
 
                             try:
-                                await self.bot.api_client.post('bot/offensive-messages', json=data)
+                                await self.bot.api_client.post(
+                                    "bot/offensive-messages", json=data
+                                )
                             except ResponseCodeError as e:
-                                if e.status == 400 and "already exists" in e.response_json.get("id", [""])[0]:
-                                    log.debug(f"Offensive message {msg.id} already exists.")
+                                if (
+                                    e.status == 400
+                                    and "already exists"
+                                    in e.response_json.get("id", [""])[0]
+                                ):
+                                    log.debug(
+                                        f"Offensive message {msg.id} already exists."
+                                    )
                                 else:
-                                    log.error(f"Offensive message {msg.id} failed to post: {e}")
+                                    log.error(
+                                        f"Offensive message {msg.id} failed to post: {e}"
+                                    )
                             else:
                                 self.schedule_msg_delete(data)
-                                log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
+                                log.trace(
+                                    f"Offensive message {msg.id} will be deleted on {delete_date}"
+                                )
 
                         stats = self._add_stats(filter_name, match, msg.content)
                         await self._send_log(filter_name, _filter, msg, stats, reason)
@@ -395,7 +421,7 @@ class Filtering(Cog):
         """Adds relevant statistical information to the relevant filter and increments the bot's stats."""
         # Word and match stats for watch_regex
         if name == "watch_regex":
-            surroundings = match.string[max(match.start() - 10, 0): match.end() + 10]
+            surroundings = match.string[max(match.start() - 10, 0) : match.end() + 10]
             message_content = (
                 f"**Match:** '{match[0]}'\n"
                 f"**Location:** '...{escape_markdown(surroundings)}...'\n"
@@ -413,11 +439,13 @@ class Filtering(Cog):
         if name == "filter_invites" and match is not True:
             additional_embeds = []
             for _, data in match.items():
-                reason = f"Reason: {data['reason']} | " if data.get('reason') else ""
-                embed = discord.Embed(description=(
-                    f"**Members:**\n{data['members']}\n"
-                    f"**Active:**\n{data['active']}"
-                ))
+                reason = f"Reason: {data['reason']} | " if data.get("reason") else ""
+                embed = discord.Embed(
+                    description=(
+                        f"**Members:**\n{data['members']}\n"
+                        f"**Active:**\n{data['active']}"
+                    )
+                )
                 embed.set_author(name=data["name"])
                 embed.set_thumbnail(url=data["icon"])
                 embed.set_footer(text=f"{reason}Guild ID: {data['id']}")
@@ -440,11 +468,13 @@ class Filtering(Cog):
 
         return (
             msg.channel.id not in Filter.channel_whitelist  # Channel not in whitelist
-            and not role_whitelisted                        # Role not in whitelist
-            and not msg.author.bot                          # Author not a bot
+            and not role_whitelisted  # Role not in whitelist
+            and not msg.author.bot  # Author not a bot
         )
 
-    async def _has_watch_regex_match(self, text: str) -> Tuple[Union[bool, re.Match], Optional[str]]:
+    async def _has_watch_regex_match(
+        self, text: str
+    ) -> Tuple[Union[bool, re.Match], Optional[str]]:
         """
         Return True if `text` matches any regex from `word_watchlist` or `token_watchlist` configs.
 
@@ -461,11 +491,16 @@ class Filtering(Cog):
         if URL_RE.search(text):
             return False, None
 
-        watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
+        watchlist_patterns = self._get_filterlist_items("filter_token", allowed=False)
         for pattern in watchlist_patterns:
             match = re.search(pattern, text, flags=re.IGNORECASE)
             if match:
-                return match, self._get_filterlist_value('filter_token', pattern, allowed=False)['comment']
+                return (
+                    match,
+                    self._get_filterlist_value("filter_token", pattern, allowed=False)[
+                        "comment"
+                    ],
+                )
 
         return False, None
 
@@ -481,7 +516,12 @@ class Filtering(Cog):
         for match in URL_RE.finditer(text):
             for url in domain_blacklist:
                 if url.lower() in match.group(1).lower():
-                    return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
+                    return (
+                        True,
+                        self._get_filterlist_value("domain_name", url, allowed=False)[
+                            "comment"
+                        ],
+                    )
         return False, None
 
     @staticmethod
@@ -526,24 +566,31 @@ class Filtering(Cog):
                 return True
 
             guild_id = guild.get("id")
-            guild_invite_whitelist = self._get_filterlist_items("guild_invite", allowed=True)
-            guild_invite_blacklist = self._get_filterlist_items("guild_invite", allowed=False)
+            guild_invite_whitelist = self._get_filterlist_items(
+                "guild_invite", allowed=True
+            )
+            guild_invite_blacklist = self._get_filterlist_items(
+                "guild_invite", allowed=False
+            )
 
             # Is this invite allowed?
-            guild_partnered_or_verified = (
-                'PARTNERED' in guild.get("features", [])
-                or 'VERIFIED' in guild.get("features", [])
-            )
+            guild_partnered_or_verified = "PARTNERED" in guild.get(
+                "features", []
+            ) or "VERIFIED" in guild.get("features", [])
             invite_not_allowed = (
-                guild_id in guild_invite_blacklist           # Blacklisted guilds are never permitted.
-                or guild_id not in guild_invite_whitelist    # Whitelisted guilds are always permitted.
-                and not guild_partnered_or_verified          # Otherwise guilds have to be Verified or Partnered.
+                guild_id
+                in guild_invite_blacklist  # Blacklisted guilds are never permitted.
+                or guild_id
+                not in guild_invite_whitelist  # Whitelisted guilds are always permitted.
+                and not guild_partnered_or_verified  # Otherwise guilds have to be Verified or Partnered.
             )
 
             if invite_not_allowed:
                 reason = None
                 if guild_id in guild_invite_blacklist:
-                    reason = self._get_filterlist_value("guild_invite", guild_id, allowed=False)["comment"]
+                    reason = self._get_filterlist_value(
+                        "guild_invite", guild_id, allowed=False
+                    )["comment"]
 
                 guild_icon_hash = guild["icon"]
                 guild_icon = (
@@ -553,11 +600,11 @@ class Filtering(Cog):
 
                 invite_data[invite] = {
                     "name": guild["name"],
-                    "id": guild['id'],
+                    "id": guild["id"],
                     "icon": guild_icon,
                     "members": response["approximate_member_count"],
                     "active": response["approximate_presence_count"],
-                    "reason": reason
+                    "reason": reason,
                 }
 
         return invite_data if invite_data else False
@@ -591,7 +638,9 @@ class Filtering(Cog):
         content_without_codeblocks = CODE_BLOCK_RE.sub("", text)
         return bool(EVERYONE_PING_RE.search(content_without_codeblocks))
 
-    async def notify_member(self, filtered_member: Member, reason: str, channel: TextChannel) -> None:
+    async def notify_member(
+        self, filtered_member: Member, reason: str, channel: TextChannel
+    ) -> None:
         """
         Notify filtered_member about a moderation action with the reason str.
 
@@ -604,18 +653,20 @@ class Filtering(Cog):
 
     def schedule_msg_delete(self, msg: dict) -> None:
         """Delete an offensive message once its deletion date is reached."""
-        delete_at = dateutil.parser.isoparse(msg['delete_date'])
-        self.scheduler.schedule_at(delete_at, msg['id'], self.delete_offensive_msg(msg))
+        delete_at = dateutil.parser.isoparse(msg["delete_date"])
+        self.scheduler.schedule_at(delete_at, msg["id"], self.delete_offensive_msg(msg))
 
     async def reschedule_offensive_msg_deletion(self) -> None:
         """Get all the pending message deletion from the API and reschedule them."""
         await self.bot.wait_until_ready()
-        response = await self.bot.api_client.get('bot/offensive-messages',)
+        response = await self.bot.api_client.get(
+            "bot/offensive-messages",
+        )
 
         now = arrow.utcnow()
 
         for msg in response:
-            delete_at = dateutil.parser.isoparse(msg['delete_date'])
+            delete_at = dateutil.parser.isoparse(msg["delete_date"])
 
             if delete_at < now:
                 await self.delete_offensive_msg(msg)
@@ -625,9 +676,9 @@ class Filtering(Cog):
     async def delete_offensive_msg(self, msg: Mapping[str, int]) -> None:
         """Delete an offensive message, and then delete it from the db."""
         try:
-            channel = self.bot.get_channel(msg['channel_id'])
+            channel = self.bot.get_channel(msg["channel_id"])
             if channel:
-                msg_obj = await channel.fetch_message(msg['id'])
+                msg_obj = await channel.fetch_message(msg["id"])
                 await msg_obj.delete()
         except NotFound:
             log.info(

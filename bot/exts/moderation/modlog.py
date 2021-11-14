@@ -14,14 +14,26 @@ from discord.ext.commands import Cog, Context
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
-from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
+from bot.constants import (
+    Categories,
+    Channels,
+    Colours,
+    Emojis,
+    Event,
+    Guild as GuildConstant,
+    Icons,
+    Roles,
+    URLs,
+)
 from bot.log import get_logger
 from bot.utils.messages import format_user
 from bot.utils.time import humanize_delta
 
 log = get_logger(__name__)
 
-GUILD_CHANNEL = t.Union[discord.CategoryChannel, discord.TextChannel, discord.VoiceChannel]
+GUILD_CHANNEL = t.Union[
+    discord.CategoryChannel, discord.TextChannel, discord.VoiceChannel
+]
 
 CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
 CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
@@ -48,29 +60,33 @@ class ModLog(Cog, name="ModLog"):
         self,
         messages: t.Iterable[discord.Message],
         actor_id: int,
-        attachments: t.Iterable[t.List[str]] = None
+        attachments: t.Iterable[t.List[str]] = None,
     ) -> str:
         """Upload message logs to the database and return a URL to a page for viewing the logs."""
         if attachments is None:
             attachments = []
 
         response = await self.bot.api_client.post(
-            'bot/deleted-messages',
+            "bot/deleted-messages",
             json={
-                'actor': actor_id,
-                'creation': datetime.now(timezone.utc).isoformat(),
-                'deletedmessage_set': [
+                "actor": actor_id,
+                "creation": datetime.now(timezone.utc).isoformat(),
+                "deletedmessage_set": [
                     {
-                        'id': message.id,
-                        'author': message.author.id,
-                        'channel_id': message.channel.id,
-                        'content': message.content.replace("\0", ""),  # Null chars cause 400.
-                        'embeds': [embed.to_dict() for embed in message.embeds],
-                        'attachments': attachment,
+                        "id": message.id,
+                        "author": message.author.id,
+                        "channel_id": message.channel.id,
+                        "content": message.content.replace(
+                            "\0", ""
+                        ),  # Null chars cause 400.
+                        "embeds": [embed.to_dict() for embed in message.embeds],
+                        "attachments": attachment,
                     }
-                    for message, attachment in zip_longest(messages, attachments, fillvalue=[])
-                ]
-            }
+                    for message, attachment in zip_longest(
+                        messages, attachments, fillvalue=[]
+                    )
+                ],
+            },
         )
 
         return f"{URLs.site_logs_view}/{response['id']}"
@@ -122,20 +138,18 @@ class ModLog(Cog, name="ModLog"):
 
         # Truncate content to 2000 characters and append an ellipsis.
         if content and len(content) > 2000:
-            content = content[:2000 - 3] + "..."
+            content = content[: 2000 - 3] + "..."
 
         channel = self.bot.get_channel(channel_id)
-        log_message = await channel.send(
-            content=content,
-            embed=embed,
-            files=files
-        )
+        log_message = await channel.send(content=content, embed=embed, files=files)
 
         if additional_embeds:
             for additional_embed in additional_embeds:
                 await channel.send(embed=additional_embed)
 
-        return await self.bot.get_context(log_message)  # Optionally return for use with antispam
+        return await self.bot.get_context(
+            log_message
+        )  # Optionally return for use with antispam
 
     @Cog.listener()
     async def on_guild_channel_create(self, channel: GUILD_CHANNEL) -> None:
@@ -161,7 +175,9 @@ class ModLog(Cog, name="ModLog"):
             else:
                 message = f"{channel.name} (`{channel.id}`)"
 
-        await self.send_log_message(Icons.hash_green, Colours.soft_green, title, message)
+        await self.send_log_message(
+            Icons.hash_green, Colours.soft_green, title, message
+        )
 
     @Cog.listener()
     async def on_guild_channel_delete(self, channel: GUILD_CHANNEL) -> None:
@@ -181,13 +197,12 @@ class ModLog(Cog, name="ModLog"):
         else:
             message = f"{channel.name} (`{channel.id}`)"
 
-        await self.send_log_message(
-            Icons.hash_red, Colours.soft_red,
-            title, message
-        )
+        await self.send_log_message(Icons.hash_red, Colours.soft_red, title, message)
 
     @Cog.listener()
-    async def on_guild_channel_update(self, before: GUILD_CHANNEL, after: GuildChannel) -> None:
+    async def on_guild_channel_update(
+        self, before: GUILD_CHANNEL, after: GuildChannel
+    ) -> None:
         """Log channel update event to mod log."""
         if before.guild.id != GuildConstant.id:
             return
@@ -198,7 +213,11 @@ class ModLog(Cog, name="ModLog"):
 
         # Two channel updates are sent for a single edit: 1 for topic and 1 for category change.
         # TODO: remove once support is added for ignoring multiple occurrences for the same channel.
-        help_categories = (Categories.help_available, Categories.help_dormant, Categories.help_in_use)
+        help_categories = (
+            Categories.help_available,
+            Categories.help_dormant,
+            Categories.help_in_use,
+        )
         if after.category and after.category.id in help_categories:
             return
 
@@ -233,7 +252,9 @@ class ModLog(Cog, name="ModLog"):
                 # Discord does not treat consecutive backticks ("``") as an empty inline code block, so the markdown
                 # formatting is broken when `new` and/or `old` are empty values. "None" is used for these cases so
                 # formatting is preserved.
-                changes.append(f"**{key.title()}:** `{old or 'None'}` **→** `{new or 'None'}`")
+                changes.append(
+                    f"**{key.title()}:** `{old or 'None'}` **→** `{new or 'None'}`"
+                )
 
             done.append(key)
 
@@ -251,8 +272,7 @@ class ModLog(Cog, name="ModLog"):
             message = f"**#{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
-            Icons.hash_blurple, Colour.blurple(),
-            "Channel updated", message
+            Icons.hash_blurple, Colour.blurple(), "Channel updated", message
         )
 
     @Cog.listener()
@@ -262,8 +282,7 @@ class ModLog(Cog, name="ModLog"):
             return
 
         await self.send_log_message(
-            Icons.crown_green, Colours.soft_green,
-            "Role created", f"`{role.id}`"
+            Icons.crown_green, Colours.soft_green, "Role created", f"`{role.id}`"
         )
 
     @Cog.listener()
@@ -273,12 +292,16 @@ class ModLog(Cog, name="ModLog"):
             return
 
         await self.send_log_message(
-            Icons.crown_red, Colours.soft_red,
-            "Role removed", f"{role.name} (`{role.id}`)"
+            Icons.crown_red,
+            Colours.soft_red,
+            "Role removed",
+            f"{role.name} (`{role.id}`)",
         )
 
     @Cog.listener()
-    async def on_guild_role_update(self, before: discord.Role, after: discord.Role) -> None:
+    async def on_guild_role_update(
+        self, before: discord.Role, after: discord.Role
+    ) -> None:
         """Log role update event to mod log."""
         if before.guild.id != GuildConstant.id:
             return
@@ -326,12 +349,13 @@ class ModLog(Cog, name="ModLog"):
         message = f"**{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
-            Icons.crown_blurple, Colour.blurple(),
-            "Role updated", message
+            Icons.crown_blurple, Colour.blurple(), "Role updated", message
         )
 
     @Cog.listener()
-    async def on_guild_update(self, before: discord.Guild, after: discord.Guild) -> None:
+    async def on_guild_update(
+        self, before: discord.Guild, after: discord.Guild
+    ) -> None:
         """Log guild update event to mod log."""
         if before.id != GuildConstant.id:
             return
@@ -376,9 +400,11 @@ class ModLog(Cog, name="ModLog"):
         message = f"**{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
-            Icons.guild_update, Colour.blurple(),
-            "Guild updated", message,
-            thumbnail=after.icon.with_static_format("png")
+            Icons.guild_update,
+            Colour.blurple(),
+            "Guild updated",
+            message,
+            thumbnail=after.icon.with_static_format("png"),
         )
 
     @Cog.listener()
@@ -392,10 +418,12 @@ class ModLog(Cog, name="ModLog"):
             return
 
         await self.send_log_message(
-            Icons.user_ban, Colours.soft_red,
-            "User banned", format_user(member),
+            Icons.user_ban,
+            Colours.soft_red,
+            "User banned",
+            format_user(member),
             thumbnail=member.display_avatar.url,
-            channel_id=Channels.user_log
+            channel_id=Channels.user_log,
         )
 
     @Cog.listener()
@@ -407,16 +435,22 @@ class ModLog(Cog, name="ModLog"):
         now = datetime.now(timezone.utc)
         difference = abs(relativedelta(now, member.created_at))
 
-        message = format_user(member) + "\n\n**Account age:** " + humanize_delta(difference)
+        message = (
+            format_user(member) + "\n\n**Account age:** " + humanize_delta(difference)
+        )
 
-        if difference.days < 1 and difference.months < 1 and difference.years < 1:  # New user account!
+        if (
+            difference.days < 1 and difference.months < 1 and difference.years < 1
+        ):  # New user account!
             message = f"{Emojis.new} {message}"
 
         await self.send_log_message(
-            Icons.sign_in, Colours.soft_green,
-            "User joined", message,
+            Icons.sign_in,
+            Colours.soft_green,
+            "User joined",
+            message,
             thumbnail=member.display_avatar.url,
-            channel_id=Channels.user_log
+            channel_id=Channels.user_log,
         )
 
     @Cog.listener()
@@ -430,10 +464,12 @@ class ModLog(Cog, name="ModLog"):
             return
 
         await self.send_log_message(
-            Icons.sign_out, Colours.soft_red,
-            "User left", format_user(member),
+            Icons.sign_out,
+            Colours.soft_red,
+            "User left",
+            format_user(member),
             thumbnail=member.display_avatar.url,
-            channel_id=Channels.user_log
+            channel_id=Channels.user_log,
         )
 
     @Cog.listener()
@@ -447,29 +483,35 @@ class ModLog(Cog, name="ModLog"):
             return
 
         await self.send_log_message(
-            Icons.user_unban, Colour.blurple(),
-            "User unbanned", format_user(member),
+            Icons.user_unban,
+            Colour.blurple(),
+            "User unbanned",
+            format_user(member),
             thumbnail=member.display_avatar.url,
-            channel_id=Channels.mod_log
+            channel_id=Channels.mod_log,
         )
 
     @staticmethod
-    def get_role_diff(before: t.List[discord.Role], after: t.List[discord.Role]) -> t.List[str]:
+    def get_role_diff(
+        before: t.List[discord.Role], after: t.List[discord.Role]
+    ) -> t.List[str]:
         """Return a list of strings describing the roles added and removed."""
         changes = []
         before_roles = set(before)
         after_roles = set(after)
 
-        for role in (before_roles - after_roles):
+        for role in before_roles - after_roles:
             changes.append(f"**Role removed:** {role.name} (`{role.id}`)")
 
-        for role in (after_roles - before_roles):
+        for role in after_roles - before_roles:
             changes.append(f"**Role added:** {role.name} (`{role.id}`)")
 
         return changes
 
     @Cog.listener()
-    async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
+    async def on_member_update(
+        self, before: discord.Member, after: discord.Member
+    ) -> None:
         """Log member update event to user log."""
         if before.guild.id != GuildConstant.id:
             return
@@ -516,7 +558,7 @@ class ModLog(Cog, name="ModLog"):
             title="Member updated",
             text=message,
             thumbnail=after.display_avatar.url,
-            channel_id=Channels.user_log
+            channel_id=Channels.user_log,
         )
 
     def is_message_blacklisted(self, message: Message) -> bool:
@@ -539,7 +581,11 @@ class ModLog(Cog, name="ModLog"):
         channel = self.bot.get_channel(channel_id)
 
         # Ignore not found channels, DMs, and messages outside of the main guild.
-        if not channel or not hasattr(channel, "guild") or channel.guild.id != GuildConstant.id:
+        if (
+            not channel
+            or not hasattr(channel, "guild")
+            or channel.guild.id != GuildConstant.id
+        ):
             return True
 
         # Look at the parent channel of a thread.
@@ -547,7 +593,9 @@ class ModLog(Cog, name="ModLog"):
             channel = channel.parent
 
         # Mod team doesn't have view permission to the channel.
-        if not channel.permissions_for(channel.guild.get_role(Roles.mod_team)).view_channel:
+        if not channel.permissions_for(
+            channel.guild.get_role(Roles.mod_team)
+        ).view_channel:
             return True
 
         return channel.id in GuildConstant.modlog_blacklist
@@ -596,7 +644,9 @@ class ModLog(Cog, name="ModLog"):
         remaining_chars = 4090 - len(response)
 
         if len(content) > remaining_chars:
-            botlog_url = await self.upload_log(messages=[message], actor_id=message.author.id)
+            botlog_url = await self.upload_log(
+                messages=[message], actor_id=message.author.id
+            )
             ending = f"\n\nMessage truncated, [full message here]({botlog_url})."
             truncation_point = remaining_chars - len(ending)
             content = f"{content[:truncation_point]}...{ending}"
@@ -604,10 +654,11 @@ class ModLog(Cog, name="ModLog"):
         response += f"{content}"
 
         await self.send_log_message(
-            Icons.message_delete, Colours.soft_red,
+            Icons.message_delete,
+            Colours.soft_red,
             "Message deleted",
             response,
-            channel_id=Channels.message_log
+            channel_id=Channels.message_log,
         )
 
     @Cog.listener()
@@ -645,14 +696,17 @@ class ModLog(Cog, name="ModLog"):
             )
 
         await self.send_log_message(
-            Icons.message_delete, Colours.soft_red,
+            Icons.message_delete,
+            Colours.soft_red,
             "Message deleted",
             response,
-            channel_id=Channels.message_log
+            channel_id=Channels.message_log,
         )
 
     @Cog.listener()
-    async def on_message_edit(self, msg_before: discord.Message, msg_after: discord.Message) -> None:
+    async def on_message_edit(
+        self, msg_before: discord.Message, msg_after: discord.Message
+    ) -> None:
         """Log message edit event to message change log."""
         if self.is_message_blacklisted(msg_before):
             return
@@ -663,9 +717,16 @@ class ModLog(Cog, name="ModLog"):
             return
 
         channel = msg_before.channel
-        channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
+        channel_name = (
+            f"{channel.category}/#{channel.name}"
+            if channel.category
+            else f"#{channel.name}"
+        )
 
-        cleaned_contents = (escape_markdown(msg.clean_content).split() for msg in (msg_before, msg_after))
+        cleaned_contents = (
+            escape_markdown(msg.clean_content).split()
+            for msg in (msg_before, msg_after)
+        )
         # Getting the difference per words and group them by type - add, remove, same
         # Note that this is intended grouping without sorting
         diff = difflib.ndiff(*cleaned_contents)
@@ -678,12 +739,12 @@ class ModLog(Cog, name="ModLog"):
         content_after: t.List[str] = []
 
         for index, (diff_type, words) in enumerate(diff_groups):
-            sub = ' '.join(words)
-            if diff_type == '-':
+            sub = " ".join(words)
+            if diff_type == "-":
                 content_before.append(f"[{sub}](http://o.hi)")
-            elif diff_type == '+':
+            elif diff_type == "+":
                 content_after.append(f"[{sub}](http://o.hi)")
-            elif diff_type == ' ':
+            elif diff_type == " ":
                 if len(words) > 2:
                     sub = (
                         f"{words[0] if index > 0 else ''}"
@@ -709,7 +770,9 @@ class ModLog(Cog, name="ModLog"):
             # datetime as the baseline and create a human-readable delta between this edit event
             # and the last time the message was edited
             timestamp = msg_before.edited_at
-            delta = humanize_delta(relativedelta(msg_after.edited_at, msg_before.edited_at))
+            delta = humanize_delta(
+                relativedelta(msg_after.edited_at, msg_before.edited_at)
+            )
             footer = f"Last edited {delta} ago"
         else:
             # Message was not previously edited, use the created_at datetime as the baseline, no
@@ -718,8 +781,13 @@ class ModLog(Cog, name="ModLog"):
             footer = None
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited", response,
-            channel_id=Channels.message_log, timestamp_override=timestamp, footer=footer
+            Icons.message_edit,
+            Colour.blurple(),
+            "Message edited",
+            response,
+            channel_id=Channels.message_log,
+            timestamp_override=timestamp,
+            footer=footer,
         )
 
     @Cog.listener()
@@ -742,7 +810,11 @@ class ModLog(Cog, name="ModLog"):
             return
 
         channel = message.channel
-        channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
+        channel_name = (
+            f"{channel.category}/#{channel.name}"
+            if channel.category
+            else f"#{channel.name}"
+        )
 
         before_response = (
             f"**Author:** {format_user(message.author)}\n"
@@ -761,13 +833,19 @@ class ModLog(Cog, name="ModLog"):
         )
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (Before)",
-            before_response, channel_id=Channels.message_log
+            Icons.message_edit,
+            Colour.blurple(),
+            "Message edited (Before)",
+            before_response,
+            channel_id=Channels.message_log,
         )
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (After)",
-            after_response, channel_id=Channels.message_log
+            Icons.message_edit,
+            Colour.blurple(),
+            "Message edited (After)",
+            after_response,
+            channel_id=Channels.message_log,
         )
 
     @Cog.listener()
@@ -781,7 +859,7 @@ class ModLog(Cog, name="ModLog"):
                 (
                     f"Thread {after.mention} (`{after.id}`) from {after.parent.mention} (`{after.parent.id}`): "
                     f"`{before.name}` -> `{after.name}`"
-                )
+                ),
             )
             return
 
@@ -803,7 +881,7 @@ class ModLog(Cog, name="ModLog"):
             (
                 f"Thread {after.mention} ({after.name}, `{after.id}`) from {after.parent.mention} "
                 f"(`{after.parent.id}`) was {action}"
-            )
+            ),
         )
 
     @Cog.listener()
@@ -816,7 +894,7 @@ class ModLog(Cog, name="ModLog"):
             (
                 f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
                 f"(`{thread.parent.id}`) deleted"
-            )
+            ),
         )
 
     @Cog.listener()
@@ -834,7 +912,7 @@ class ModLog(Cog, name="ModLog"):
             (
                 f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
                 f"(`{thread.parent.id}`) created"
-            )
+            ),
         )
 
     @Cog.listener()
@@ -842,7 +920,7 @@ class ModLog(Cog, name="ModLog"):
         self,
         member: discord.Member,
         before: discord.VoiceState,
-        after: discord.VoiceState
+        after: discord.VoiceState,
     ) -> None:
         """Log member voice state changes to the voice log channel."""
         if (
@@ -908,7 +986,7 @@ class ModLog(Cog, name="ModLog"):
             title="Voice state updated",
             text=message,
             thumbnail=member.display_avatar.url,
-            channel_id=Channels.voice_log
+            channel_id=Channels.voice_log,
         )
 
 

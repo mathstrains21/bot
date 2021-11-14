@@ -29,7 +29,7 @@ class Logging(Cog):
             icon_url=(
                 "https://raw.githubusercontent.com/"
                 "python-discord/branding/main/logos/logo_circle/logo_circle_large.png"
-            )
+            ),
         )
 
         if not DEBUG_MODE:

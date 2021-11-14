@@ -7,7 +7,15 @@ from discord.ext import commands
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
+from bot.constants import (
+    Channels,
+    CleanMessages,
+    Colours,
+    Event,
+    Icons,
+    MODERATION_ROLES,
+    NEGATIVE_REPLIES,
+)
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 
@@ -45,6 +53,7 @@ class Clean(Cog):
         until_message: Optional[Message] = None,
     ) -> None:
         """A helper function that does the actual message cleaning."""
+
         def predicate_bots_only(message: Message) -> bool:
             """Return True if the message was sent by a bot."""
             return message.author.bot
@@ -82,7 +91,7 @@ class Clean(Cog):
             embed = Embed(
                 color=Colour(Colours.soft_red),
                 title=random.choice(NEGATIVE_REPLIES),
-                description=f"You cannot clean more than {CleanMessages.message_limit} messages."
+                description=f"You cannot clean more than {CleanMessages.message_limit} messages.",
             )
             await ctx.send(embed=embed)
             return
@@ -92,20 +101,20 @@ class Clean(Cog):
             embed = Embed(
                 color=Colour(Colours.soft_red),
                 title=random.choice(NEGATIVE_REPLIES),
-                description="Please wait for the currently ongoing clean operation to complete."
+                description="Please wait for the currently ongoing clean operation to complete.",
             )
             await ctx.send(embed=embed)
             return
 
         # Set up the correct predicate
         if bots_only:
-            predicate = predicate_bots_only      # Delete messages from bots
+            predicate = predicate_bots_only  # Delete messages from bots
         elif user:
             predicate = predicate_specific_user  # Delete messages from specific user
         elif regex:
-            predicate = predicate_regex          # Delete messages that match regex
+            predicate = predicate_regex  # Delete messages that match regex
         else:
-            predicate = lambda *_: True          # Delete all messages
+            predicate = lambda *_: True  # Delete all messages
 
         # Default to using the invoking context's channel
         if not channels:
@@ -159,7 +168,7 @@ class Clean(Cog):
                     # while purge automatically handles the amount of messages
                     # delete_messages only allows for up to 100 messages at once
                     # thus we need to paginate the amount to always be <= 100
-                    await channel.delete_messages(messages[i:i + 100])
+                    await channel.delete_messages(messages[i : i + 100])
             else:
                 messages += await channel.purge(limit=amount, check=predicate)
 
@@ -171,7 +180,7 @@ class Clean(Cog):
             # Can't build an embed, nothing to clean!
             embed = Embed(
                 color=Colour(Colours.soft_red),
-                description="No matching messages could be found."
+                description="No matching messages could be found.",
             )
             await ctx.send(embed=embed, delete_after=10)
             return
@@ -206,7 +215,7 @@ class Clean(Cog):
         ctx: Context,
         user: User,
         amount: Optional[int] = 10,
-        channels: commands.Greedy[TextChannel] = None
+        channels: commands.Greedy[TextChannel] = None,
     ) -> None:
         """Delete messages posted by the provided user, stop cleaning after traversing `amount` messages."""
         await self._clean_messages(amount, ctx, user=user, channels=channels)
@@ -217,7 +226,7 @@ class Clean(Cog):
         self,
         ctx: Context,
         amount: Optional[int] = 10,
-        channels: commands.Greedy[TextChannel] = None
+        channels: commands.Greedy[TextChannel] = None,
     ) -> None:
         """Delete all messages, regardless of poster, stop cleaning after traversing `amount` messages."""
         await self._clean_messages(amount, ctx, channels=channels)
@@ -228,7 +237,7 @@ class Clean(Cog):
         self,
         ctx: Context,
         amount: Optional[int] = 10,
-        channels: commands.Greedy[TextChannel] = None
+        channels: commands.Greedy[TextChannel] = None,
     ) -> None:
         """Delete all messages posted by a bot, stop cleaning after traversing `amount` messages."""
         await self._clean_messages(amount, ctx, bots_only=True, channels=channels)
@@ -240,7 +249,7 @@ class Clean(Cog):
         ctx: Context,
         regex: str,
         amount: Optional[int] = 10,
-        channels: commands.Greedy[TextChannel] = None
+        channels: commands.Greedy[TextChannel] = None,
     ) -> None:
         """Delete all messages that match a certain regex, stop cleaning after traversing `amount` messages."""
         await self._clean_messages(amount, ctx, regex=regex, channels=channels)
@@ -253,7 +262,7 @@ class Clean(Cog):
             CleanMessages.message_limit,
             ctx,
             channels=[message.channel],
-            until_message=message
+            until_message=message,
         )
 
     @clean_group.command(name="stop", aliases=["cancel", "abort"])
@@ -262,10 +271,7 @@ class Clean(Cog):
         """If there is an ongoing cleaning process, attempt to immediately cancel it."""
         self.cleaning = False
 
-        embed = Embed(
-            color=Colour.blurple(),
-            description="Clean interrupted."
-        )
+        embed = Embed(color=Colour.blurple(), description="Clean interrupted.")
         await ctx.send(embed=embed, delete_after=10)
 
 
